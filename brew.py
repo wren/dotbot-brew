@@ -13,12 +13,9 @@ class Brew(dotbot.Plugin):
     _directives: Mapping[str, Callable]
     _defaults: Mapping[str, Any]
 
-    _autoBootstrapOption: str = "auto_bootstrap"
-    _forceIntelOption: str = "force_intel"
-
     def __init__(self, context) -> None:
         self._directives = {
-            "install-brew": self._installBrew,
+            "install-brew": self._install_brew,
             "brew": self._brew,
             "cask": self._cask,
             "tap": self._tap,
@@ -30,18 +27,21 @@ class Brew(dotbot.Plugin):
                 "stdin": False,
                 "stderr": False,
                 "stdout": False,
+                "force_intel": False,
             },
             "cask": {
                 "auto_bootstrap": False,
                 "stdin": False,
                 "stderr": False,
                 "stdout": False,
+                "force_intel": False,
             },
             "brewfile": {
                 "auto_bootstrap": False,
-                "stdin": False,
-                "stderr": False,
-                "stdout": False,
+                "stdin": True,
+                "stderr": True,
+                "stdout": True,
+                "force_intel": False,
             },
         }
         super().__init__(context)
@@ -50,76 +50,78 @@ class Brew(dotbot.Plugin):
         return directive in list(self._directives.keys())
 
     def handle(self, directive: str, data: Iterable) -> bool:
-        defaults = self._context.defaults().get(directive, {})
-        my_defaults = defaults | self._defaults[directive]
-        return self._directives[directive](data, my_defaults)
+        user_defaults = self._context.defaults().get(directive)
+        local_defaults = self._defaults[directive]
+        defaults = local_defaults | user_defaults
+        return self._directives[directive](data, defaults)
 
-    def _invokeShellCommand(self, cmd, defaults):
+    def _invoke_shell_command(self, cmd: str, defaults: Mapping[str, Any]) -> int:
         with open(os.devnull, "w") as devnull:
-            stdin = stdout = stderr = devnull
-            if defaults.get("stdin", False) == True:
-                stdin = None
-            if defaults.get("stdout", False) == True:
-                stdout = None
-            if defaults.get("stderr", False) == True:
-                stderr = None
-            if defaults.get(self._forceIntelOption, False) == True:
+            kwargs: Mapping[str, Any] = {
+                "Shell": True,
+                "cwd": self._context.base_directory(),
+                "stdin": devnull if defaults["stdin"] else None,
+                "stdout": devnull if defaults["stdout"] else None,
+                "stderr": devnull if defaults["stderr"] else None,
+            }
+
+            if defaults["force_intel"]:
                 cmd = "arch --x86_64 " + cmd
-            return subprocess.call(
-                cmd,
-                shell=True,
-                stdin=stdin,
-                stdout=stdout,
-                stderr=stderr,
-                cwd=self._context.base_directory(),
-            )
 
-    def _tap(self, tap_list, defaults):
-        if defaults.get(self._autoBootstrapOption, False) == True:
+            return subprocess.call(cmd, **kwargs)
+
+    def _tap(self, tap_list, defaults) -> bool:
+        result: bool = True
+
+        if defaults[ "auto_bootstrap"]:
             self._bootstrap_brew()
-        log = self._log
+
         for tap in tap_list:
-            log.info("Tapping %s" % tap)
-            cmd = "brew tap %s" % (tap)
-            result = self._invokeShellCommand(cmd, defaults)
-            if result != 0:
-                log.warning("Failed to tap [%s]" % tap)
-                return False
-        return True
+            self._log.info(f"Tapping {tap}")
+            cmd: str = f"brew tap {tap}"
+            cmd_result: int = self._invoke_shell_command(cmd, defaults)
+            if cmd_result != 0:
+                # even if one tap fails, attempt the remaining ones
+                self._log.warning(f"Failed to tap [{tap}]")
+                result = False
+        return result
 
-    def _brew(self, packages, defaults):
-        if defaults.get(self._autoBootstrapOption, True) == True:
+    def _brew(self, packages: list, defaults: Mapping[str, Any]) -> bool:
+        if defaults[ "auto_bootstrap"]:
             self._bootstrap_brew()
-        return self._processPackages(
-            "brew install %s",
-            "test -d /usr/local/Cellar/%s || brew ls --versions %s",
+
+        return self._process_packages(
+            "brew install {pkg}",
+            "test -d /usr/local/Cellar/{pkg_name} || brew ls --versions {pkg_name}",
             packages,
             defaults,
         )
 
-    def _cask(self, packages, defaults):
-        if defaults.get(self._autoBootstrapOption, True) == True:
+    def _cask(self, packages, defaults) -> bool:
+        if defaults["auto_bootstrap"]:
             self._bootstrap_brew()
-            self._bootstrap_cask()
-        return self._processPackages(
-            "brew install --cask %s",
-            "test -d /usr/local/Caskroom/%s || brew ls --cask --versions %s",
+        return self._process_packages(
+            "brew install --cask {pkg}",
+            "test -d /usr/local/Caskroom/{pkg_name} || brew ls --cask --versions {pkg_name}",
             packages,
             defaults,
         )
 
-    def _processPackages(
+    def _process_packages(
         self, install_format, check_installed_format, packages, defaults
     ) -> bool:
+        result: bool = True
+
         for pkg in packages:
-            if (
-                self._install(install_format, check_installed_format, pkg, defaults)
-                == False
-            ):
+            run = self._install(install_format, check_installed_format, pkg, defaults)
+            if not run:
                 self._log.error("Some packages were not installed")
-                return False
-        self._log.info("All packages have been installed")
-        return True
+                result = False
+
+        if result:
+            self._log.info("All packages have been installed")
+
+        return result
 
     def _install(self, install_format, check_installed_format, pkg, defaults):
         cwd = self._context.base_directory()
@@ -128,8 +130,15 @@ class Brew(dotbot.Plugin):
             self._log.error("Cannot process blank package name")
             return False
 
-        # Take out tap names (before slashes), and flags (after spaces)
-        pkg_name = re.search(r"^(?:.+/)?(.+?)(?: .+)?$", pkg)[1]
+        # Take out tap names (before slashes), and flags (after spaces), to get
+        # just the package name (the part in between)
+        pkg_parse = re.search(r"^(?:.+/)?(.+?)(?: .+)?$", pkg)
+        if not pkg_parse:
+            # ¯\_(ツ)_/¯
+            self._log.error(f"Package name {pkg} doesn't work for some reason")
+            return False
+
+        pkg_name = pkg_parse[1]
 
         with open(os.devnull, "w") as devnull:
             isInstalled = subprocess.call(
@@ -146,52 +155,37 @@ class Brew(dotbot.Plugin):
                 return True
 
             self._log.info("Installing %s" % pkg)
-            result = self._invokeShellCommand(install_format % (pkg), defaults)
+            result = self._invoke_shell_command(install_format % (pkg), defaults)
             if 0 != result:
                 self._log.warning("Failed to install [%s]" % pkg)
 
             return 0 == result
 
-    def _brewfile(self, brew_files, defaults):
-        log = self._log
-        # this directive has opposite defaults re stdin/stderr/stdout
-        defaults["stdin"] = defaults.get("stdin", True)
-        defaults["stderr"] = defaults.get("stderr", True)
-        defaults["stdout"] = defaults.get("stdout", True)
-        if defaults.get(self._autoBootstrapOption, True) == True:
+    def _brewfile(self, brew_files: list, defaults: Mapping[str, Any]) -> bool:
+        result: bool = True
+
+        if defaults["auto_bootstrap"]:
             self._bootstrap_brew()
-            self._bootstrap_cask()
-        for f in brew_files:
-            log.info("Installing from file %s" % f)
-            cmd = "brew bundle --verbose --file=%s" % f
-            result = self._invokeShellCommand(cmd, defaults)
 
-            if result != 0:
-                log.warning("Failed to install file [%s]" % f)
-                return False
-        return True
+        for file in brew_files:
+            self._log.info(f"Installing from file {file}")
+            cmd = f"brew bundle --verbose --file={file}"
 
-    def _installBrew(self, components):
-        log = self._log
-        for component in components:
-            if component == "brew":
-                self._bootstrap_brew()
-            elif component == "cask":
-                self._bootstrap_cask()
-            else:
-                log.error("Unknown component to install [%s]" % component)
-                return False
-        return True
+            if 0 != self._invoke_shell_command(cmd, defaults):
+                self._log.warning(f"Failed to install file [{file}]")
+                result = False
+
+        return result
+
+    def _install_brew(self, val: bool) -> bool:
+        if not val:
+            self._log.error("Why would you even put `install-brew: false` in there?")
+            return False
+
+        return 0 == self._bootstrap_brew()
 
     def _bootstrap_brew(self):
         self._log.info("Installing brew")
         link = "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
-        cmd = """[[ $(command -v brew) != "" ]] || /bin/bash -c "$(curl -fsSL {0})" """.format(
-            link
-        )
-        return subprocess.call(cmd, shell=True, cwd=self._context.base_directory()) == 0
-
-    def _bootstrap_cask(self):
-        self._log.info("Installing cask")
-        cmd = "brew tap homebrew/cask"
+        cmd = f'command -v brew >/dev/null || /bin/bash -c "$(curl -fsSL {link})"'
         return subprocess.call(cmd, shell=True, cwd=self._context.base_directory()) == 0

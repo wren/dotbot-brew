@@ -17,9 +17,7 @@
         stderr: true
         stdout: true
 
-- installBrew:
-    - brew
-    - cask
+- install-brew: True
 
 - brewfile:
   - Brewfile-example
