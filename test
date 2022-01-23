@@ -31,5 +31,5 @@ cd "$dotfiles" && {
   cat install.conf.yaml
 
   echo "install all packages"
-  ./install
+  ./install --verbose
 }
