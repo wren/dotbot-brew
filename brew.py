@@ -1,7 +1,7 @@
 import os
-import platform
 import subprocess
 import dotbot
+
 
 class Brew(dotbot.Plugin):
     _installBrewDirective = "installBrew"
@@ -14,7 +14,13 @@ class Brew(dotbot.Plugin):
     _forceIntelOption = "force_intel"
 
     def can_handle(self, directive):
-        return directive in (self._installBrewDirective, self._tapDirective, self._brewDirective, self._caskDirective, self._brewFileDirective)
+        return directive in (
+            self._installBrewDirective,
+            self._tapDirective,
+            self._brewDirective,
+            self._caskDirective,
+            self._brewFileDirective,
+        )
 
     def handle(self, directive, data):
         defaults = self._context.defaults().get(directive, {})
@@ -29,21 +35,27 @@ class Brew(dotbot.Plugin):
         if directive == self._brewFileDirective:
             return self._brewfile(data, defaults)
         self._log.info("didn't found directive %s", directive)
-        raise ValueError('Brew cannot handle directive %s' % directive)
+        raise ValueError("Brew cannot handle directive %s" % directive)
 
     def _invokeShellCommand(self, cmd, defaults):
-        with open(os.devnull, 'w') as devnull:
+        with open(os.devnull, "w") as devnull:
             stdin = stdout = stderr = devnull
-            if defaults.get('stdin', False) == True:
+            if defaults.get("stdin", False) == True:
                 stdin = None
-            if defaults.get('stdout', False) == True:
+            if defaults.get("stdout", False) == True:
                 stdout = None
-            if defaults.get('stderr', False) == True:
+            if defaults.get("stderr", False) == True:
                 stderr = None
             if defaults.get(self._forceIntelOption, False) == True:
                 cmd = "arch --x86_64 " + cmd
-            return subprocess.call(cmd, shell=True, stdin=stdin, stdout=stdout, stderr=stderr,
-                                   cwd=self._context.base_directory())
+            return subprocess.call(
+                cmd,
+                shell=True,
+                stdin=stdin,
+                stdout=stdout,
+                stderr=stderr,
+                cwd=self._context.base_directory(),
+            )
 
     def _tap(self, tap_list, defaults):
         if defaults.get(self._autoBootstrapOption, True) == True:
@@ -54,47 +66,58 @@ class Brew(dotbot.Plugin):
             cmd = "brew tap %s" % (tap)
             result = self._invokeShellCommand(cmd, defaults)
             if result != 0:
-                log.warning('Failed to tap [%s]' % tap)
+                log.warning("Failed to tap [%s]" % tap)
                 return False
         return True
 
     def _brew(self, packages, defaults):
         if defaults.get(self._autoBootstrapOption, True) == True:
             self._bootstrap_brew()
-        return self._processPackages("brew install %s",
-                                     "brew ls --versions %s", packages, defaults)
+        return self._processPackages(
+            "brew install %s", "brew ls --versions %s", packages, defaults
+        )
 
     def _cask(self, packages, defaults):
         if defaults.get(self._autoBootstrapOption, True) == True:
             self._bootstrap_brew()
             self._bootstrap_cask()
-        return self._processPackages("brew install --cask %s",
-                                     "brew ls --cask --versions %s", packages, defaults)
+        return self._processPackages(
+            "brew install --cask %s", "brew ls --cask --versions %s", packages, defaults
+        )
 
-    def _processPackages(self, install_format, check_installed_format, packages, defaults):
+    def _processPackages(
+        self, install_format, check_installed_format, packages, defaults
+    ):
         log = self._log
         for pkg in packages:
             install_cmd = install_format % (pkg)
             check_installed_cmd = check_installed_format % (pkg)
-            if self._install(install_format, check_installed_format, pkg, defaults) == False:
-                self._log.error('Some packages were not installed')
+            if (
+                self._install(install_format, check_installed_format, pkg, defaults)
+                == False
+            ):
+                self._log.error("Some packages were not installed")
                 return False
-        self._log.info('All packages have been installed')
+        self._log.info("All packages have been installed")
         return True
 
     def _install(self, install_format, check_installed_format, pkg, defaults):
         cwd = self._context.base_directory()
         log = self._log
-        with open(os.devnull, 'w') as devnull:
+        with open(os.devnull, "w") as devnull:
             isInstalled = subprocess.call(
                 check_installed_format % (pkg),
-                shell=True, stdin=devnull, stdout=devnull, stderr=devnull, cwd=cwd)
+                shell=True,
+                stdin=devnull,
+                stdout=devnull,
+                stderr=devnull,
+                cwd=cwd,
+            )
             if isInstalled != 0:
                 log.info("Installing %s" % pkg)
-                result = self._invokeShellCommand(
-                    install_format % (pkg), defaults)
+                result = self._invokeShellCommand(install_format % (pkg), defaults)
                 if result != 0:
-                    log.warning('Failed to install [%s]' % pkg)
+                    log.warning("Failed to install [%s]" % pkg)
                     return False
             else:
                 log.info("%s already installed" % pkg)
@@ -103,9 +126,9 @@ class Brew(dotbot.Plugin):
     def _brewfile(self, brew_files, defaults):
         log = self._log
         # this directive has opposite defaults re stdin/stderr/stdout
-        defaults['stdin'] = defaults.get('stdin', True)
-        defaults['stderr'] = defaults.get('stderr', True)
-        defaults['stdout'] = defaults.get('stdout', True)
+        defaults["stdin"] = defaults.get("stdin", True)
+        defaults["stderr"] = defaults.get("stderr", True)
+        defaults["stdout"] = defaults.get("stdout", True)
         if defaults.get(self._autoBootstrapOption, True) == True:
             self._bootstrap_brew()
             self._bootstrap_cask()
@@ -115,7 +138,7 @@ class Brew(dotbot.Plugin):
             result = self._invokeShellCommand(cmd, defaults)
 
             if result != 0:
-                log.warning('Failed to install file [%s]' % f)
+                log.warning("Failed to install file [%s]" % f)
                 return False
         return True
 
@@ -135,7 +158,8 @@ class Brew(dotbot.Plugin):
         self._log.info("Installing brew")
         link = "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
         cmd = """[[ $(command -v brew) != "" ]] || /bin/bash -c "$(curl -fsSL {0})" """.format(
-            link)
+            link
+        )
         return subprocess.call(cmd, shell=True, cwd=self._context.base_directory()) == 0
 
     def _bootstrap_cask(self):
