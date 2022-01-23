@@ -1,17 +1,17 @@
 - defaults:
-    brew: 
+    brew:
         auto_bootstrap: false
         stdin: true
         stderr: true
         stdout: true
 
-    cask: 
+    cask:
         auto_bootstrap: false
         stdin: true
         stderr: true
         stdout: true
 
-    brewfile: 
+    brewfile:
         auto_bootstrap: false
         stdin: true
         stderr: true
@@ -21,7 +21,7 @@
     - brew
     - cask
 
-- brewfile: 
+- brewfile:
   - Brewfile-example
 
 - brew:

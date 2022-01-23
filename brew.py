@@ -3,12 +3,14 @@ import subprocess
 from typing import Mapping
 from typing import Callable
 from typing import Iterable
+from typing import Any
 
 import dotbot
 
 
 class Brew(dotbot.Plugin):
     _directives: Mapping[str, Callable]
+    _defaults: Mapping[str, Any]
 
     _autoBootstrapOption: str = "auto_bootstrap"
     _forceIntelOption: str = "force_intel"
@@ -21,15 +23,37 @@ class Brew(dotbot.Plugin):
             "tap": self._tap,
             "brewfile": self._brewfile,
         }
+        self._defaults = {
+            'brew': {
+                'auto_bootstrap': False,
+                'stdin': False,
+                'stderr': False,
+                'stdout': False,
+            },
+
+            'cask': {
+                'auto_bootstrap': False,
+                'stdin': False,
+                'stderr': False,
+                'stdout': False,
+            },
+
+            'brewfile': {
+                'auto_bootstrap': False,
+                'stdin': False,
+                'stderr': False,
+                'stdout': False,
+            },
+        }
         super().__init__(context)
 
     def can_handle(self, directive: str) -> bool:
         return directive in list(self._directives.keys())
 
     def handle(self, directive: str, data: Iterable) -> bool:
-        self._log.info('handle')
         defaults = self._context.defaults().get(directive, {})
-        return self._directives[directive](data, defaults)
+        my_defaults = defaults | self._defaults[directive]
+        return self._directives[directive](data, my_defaults)
 
     def _invokeShellCommand(self, cmd, defaults):
         with open(os.devnull, "w") as devnull:
@@ -52,7 +76,7 @@ class Brew(dotbot.Plugin):
             )
 
     def _tap(self, tap_list, defaults):
-        if defaults.get(self._autoBootstrapOption, True) == True:
+        if defaults.get(self._autoBootstrapOption, False) == True:
             self._bootstrap_brew()
         log = self._log
         for tap in tap_list:
@@ -81,10 +105,8 @@ class Brew(dotbot.Plugin):
 
     def _processPackages(
         self, install_format, check_installed_format, packages, defaults
-    ):
+    ) -> bool:
         for pkg in packages:
-            install_cmd = install_format % (pkg)
-            check_installed_cmd = check_installed_format % (pkg)
             if (
                 self._install(install_format, check_installed_format, pkg, defaults)
                 == False
@@ -106,15 +128,17 @@ class Brew(dotbot.Plugin):
                 stderr=devnull,
                 cwd=cwd,
             )
-            if isInstalled != 0:
-                log.info("Installing %s" % pkg)
-                result = self._invokeShellCommand(install_format % (pkg), defaults)
-                if result != 0:
-                    log.warning("Failed to install [%s]" % pkg)
-                    return False
-            else:
+
+            if isInstalled == 0:
                 log.lowinfo("%s already installed" % pkg)
-            return True
+                return True
+
+            log.info("Installing %s" % pkg)
+            result = self._invokeShellCommand(install_format % (pkg), defaults)
+            if 0 != result:
+                log.warning("Failed to install [%s]" % pkg)
+
+            return 0 == result
 
     def _brewfile(self, brew_files, defaults):
         log = self._log
