@@ -50,8 +50,8 @@ class Brew(dotbot.Plugin):
         return directive in list(self._directives.keys())
 
     def handle(self, directive: str, data: Iterable) -> bool:
-        user_defaults = self._context.defaults().get(directive)
-        local_defaults = self._defaults[directive]
+        user_defaults = self._context.defaults().get(directive, {})
+        local_defaults = self._defaults.get(directive, {})
         defaults = local_defaults | user_defaults
         return self._directives[directive](data, defaults)
 
@@ -142,7 +142,7 @@ class Brew(dotbot.Plugin):
 
         with open(os.devnull, "w") as devnull:
             isInstalled = subprocess.call(
-                check_installed_format % (pkg_name, pkg_name),
+                check_installed_format.format(pkg_name=pkg_name),
                 shell=True,
                 stdin=devnull,
                 stdout=devnull,
@@ -151,13 +151,13 @@ class Brew(dotbot.Plugin):
             )
 
             if isInstalled == 0:
-                self._log.debug("%s already installed" % pkg)
+                self._log.debug(f"{pkg} already installed")
                 return True
 
-            self._log.info("Installing %s" % pkg)
-            result = self._invoke_shell_command(install_format % (pkg), defaults)
+            self._log.info(f"Installing {pkg}")
+            result = self._invoke_shell_command(install_format.format(pkg=pkg), defaults)
             if 0 != result:
-                self._log.warning("Failed to install [%s]" % pkg)
+                self._log.warning("Failed to install [{pkg}]")
 
             return 0 == result
 
