@@ -25,25 +25,23 @@ class Brew(dotbot.Plugin):
             "brewfile": self._brewfile,
         }
         self._defaults = {
-            'brew': {
-                'auto_bootstrap': False,
-                'stdin': False,
-                'stderr': False,
-                'stdout': False,
+            "brew": {
+                "auto_bootstrap": False,
+                "stdin": False,
+                "stderr": False,
+                "stdout": False,
             },
-
-            'cask': {
-                'auto_bootstrap': False,
-                'stdin': False,
-                'stderr': False,
-                'stdout': False,
+            "cask": {
+                "auto_bootstrap": False,
+                "stdin": False,
+                "stderr": False,
+                "stdout": False,
             },
-
-            'brewfile': {
-                'auto_bootstrap': False,
-                'stdin': False,
-                'stderr': False,
-                'stdout': False,
+            "brewfile": {
+                "auto_bootstrap": False,
+                "stdin": False,
+                "stderr": False,
+                "stdout": False,
             },
         }
         super().__init__(context)
@@ -93,7 +91,10 @@ class Brew(dotbot.Plugin):
         if defaults.get(self._autoBootstrapOption, True) == True:
             self._bootstrap_brew()
         return self._processPackages(
-            "brew install %s", "test -d /usr/local/Cellar/%s || brew ls --versions %s", packages, defaults
+            "brew install %s",
+            "test -d /usr/local/Cellar/%s || brew ls --versions %s",
+            packages,
+            defaults,
         )
 
     def _cask(self, packages, defaults):
@@ -101,7 +102,10 @@ class Brew(dotbot.Plugin):
             self._bootstrap_brew()
             self._bootstrap_cask()
         return self._processPackages(
-            "brew install --cask %s", "test -d /usr/local/Caskroom/%s || brew ls --cask --versions %s", packages, defaults
+            "brew install --cask %s",
+            "test -d /usr/local/Caskroom/%s || brew ls --cask --versions %s",
+            packages,
+            defaults,
         )
 
     def _processPackages(
@@ -121,11 +125,11 @@ class Brew(dotbot.Plugin):
         cwd = self._context.base_directory()
 
         if not pkg:
-            self._log.error('Cannot process blank package name')
+            self._log.error("Cannot process blank package name")
             return False
 
         # Take out tap names (before slashes), and flags (after spaces)
-        pkg_name = re.search(r'^(?:.+/)?(.+?)(?: .+)?$', pkg)[1]
+        pkg_name = re.search(r"^(?:.+/)?(.+?)(?: .+)?$", pkg)[1]
 
         with open(os.devnull, "w") as devnull:
             isInstalled = subprocess.call(
