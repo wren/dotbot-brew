@@ -1,4 +1,5 @@
 import os
+import re
 import subprocess
 from typing import Mapping
 from typing import Callable
@@ -92,7 +93,7 @@ class Brew(dotbot.Plugin):
         if defaults.get(self._autoBootstrapOption, True) == True:
             self._bootstrap_brew()
         return self._processPackages(
-            "brew install %s", "brew ls --versions %s", packages, defaults
+            "brew install %s", "test -d /usr/local/Cellar/%s || brew ls --versions %s", packages, defaults
         )
 
     def _cask(self, packages, defaults):
@@ -100,7 +101,7 @@ class Brew(dotbot.Plugin):
             self._bootstrap_brew()
             self._bootstrap_cask()
         return self._processPackages(
-            "brew install --cask %s", "brew ls --cask --versions %s", packages, defaults
+            "brew install --cask %s", "test -d /usr/local/Caskroom/%s || brew ls --cask --versions %s", packages, defaults
         )
 
     def _processPackages(
@@ -118,10 +119,17 @@ class Brew(dotbot.Plugin):
 
     def _install(self, install_format, check_installed_format, pkg, defaults):
         cwd = self._context.base_directory()
-        log = self._log
+
+        if not pkg:
+            self._log.error('Cannot process blank package name')
+            return False
+
+        # Take out tap names (before slashes), and flags (after spaces)
+        pkg_name = re.search(r'^(?:.+/)?(.+?)(?: .+)?$', pkg)[1]
+
         with open(os.devnull, "w") as devnull:
             isInstalled = subprocess.call(
-                check_installed_format % (pkg),
+                check_installed_format % (pkg_name, pkg_name),
                 shell=True,
                 stdin=devnull,
                 stdout=devnull,
@@ -130,13 +138,13 @@ class Brew(dotbot.Plugin):
             )
 
             if isInstalled == 0:
-                log.lowinfo("%s already installed" % pkg)
+                self._log.debug("%s already installed" % pkg)
                 return True
 
-            log.info("Installing %s" % pkg)
+            self._log.info("Installing %s" % pkg)
             result = self._invokeShellCommand(install_format % (pkg), defaults)
             if 0 != result:
-                log.warning("Failed to install [%s]" % pkg)
+                self._log.warning("Failed to install [%s]" % pkg)
 
             return 0 == result
 
