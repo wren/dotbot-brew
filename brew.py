@@ -1,41 +1,35 @@
 import os
 import subprocess
+from typing import Mapping
+from typing import Callable
+from typing import Iterable
+
 import dotbot
 
 
 class Brew(dotbot.Plugin):
-    _installBrewDirective = "installBrew"
-    _brewDirective = "brew"
-    _caskDirective = "cask"
-    _tapDirective = "tap"
-    _brewFileDirective = "brewfile"
+    _directives: Mapping[str, Callable]
 
-    _autoBootstrapOption = "auto_bootstrap"
-    _forceIntelOption = "force_intel"
+    _autoBootstrapOption: str = "auto_bootstrap"
+    _forceIntelOption: str = "force_intel"
 
-    def can_handle(self, directive):
-        return directive in (
-            self._installBrewDirective,
-            self._tapDirective,
-            self._brewDirective,
-            self._caskDirective,
-            self._brewFileDirective,
-        )
+    def __init__(self, context) -> None:
+        self._directives = {
+            "install-brew": self._installBrew,
+            "brew": self._brew,
+            "cask": self._cask,
+            "tap": self._tap,
+            "brewfile": self._brewfile,
+        }
+        super().__init__(context)
 
-    def handle(self, directive, data):
+    def can_handle(self, directive: str) -> bool:
+        return directive in list(self._directives.keys())
+
+    def handle(self, directive: str, data: Iterable) -> bool:
+        self._log.info('handle')
         defaults = self._context.defaults().get(directive, {})
-        if directive == self._tapDirective:
-            return self._tap(data, defaults)
-        if directive == self._brewDirective:
-            return self._brew(data, defaults)
-        if directive == self._caskDirective:
-            return self._cask(data, defaults)
-        if directive == self._installBrewDirective:
-            return self._installBrew(data)
-        if directive == self._brewFileDirective:
-            return self._brewfile(data, defaults)
-        self._log.info("didn't found directive %s", directive)
-        raise ValueError("Brew cannot handle directive %s" % directive)
+        return self._directives[directive](data, defaults)
 
     def _invokeShellCommand(self, cmd, defaults):
         with open(os.devnull, "w") as devnull:
@@ -88,7 +82,6 @@ class Brew(dotbot.Plugin):
     def _processPackages(
         self, install_format, check_installed_format, packages, defaults
     ):
-        log = self._log
         for pkg in packages:
             install_cmd = install_format % (pkg)
             check_installed_cmd = check_installed_format % (pkg)
@@ -120,7 +113,7 @@ class Brew(dotbot.Plugin):
                     log.warning("Failed to install [%s]" % pkg)
                     return False
             else:
-                log.info("%s already installed" % pkg)
+                log.lowinfo("%s already installed" % pkg)
             return True
 
     def _brewfile(self, brew_files, defaults):
