@@ -73,7 +73,7 @@ class Brew(dotbot.Plugin):
     def _tap(self, tap_list, defaults) -> bool:
         result: bool = True
 
-        if defaults[ "auto_bootstrap"]:
+        if defaults["auto_bootstrap"]:
             self._bootstrap_brew()
 
         for tap in tap_list:
@@ -87,39 +87,48 @@ class Brew(dotbot.Plugin):
         return result
 
     def _brew(self, packages: list, defaults: Mapping[str, Any]) -> bool:
-        if defaults[ "auto_bootstrap"]:
-            self._bootstrap_brew()
-
-        return self._process_packages(
-            "brew install {pkg}",
-            "test -d /usr/local/Cellar/{pkg_name} || brew ls --versions {pkg_name}",
-            packages,
-            defaults,
-        )
-
-    def _cask(self, packages, defaults) -> bool:
         if defaults["auto_bootstrap"]:
             self._bootstrap_brew()
-        return self._process_packages(
-            "brew install --cask {pkg}",
-            "test -d /usr/local/Caskroom/{pkg_name} || brew ls --cask --versions {pkg_name}",
-            packages,
-            defaults,
-        )
 
-    def _process_packages(
-        self, install_format, check_installed_format, packages, defaults
-    ) -> bool:
         result: bool = True
 
         for pkg in packages:
-            run = self._install(install_format, check_installed_format, pkg, defaults)
+            run = self._install(
+                "brew install {pkg}",
+                "test -d /usr/local/Cellar/{pkg_name} "
+                + "|| brew ls --versions {pkg_name}",
+                pkg,
+                defaults,
+            )
             if not run:
                 self._log.error("Some packages were not installed")
                 result = False
 
         if result:
-            self._log.info("All packages have been installed")
+            self._log.info("All brew packages have been installed")
+
+        return result
+
+    def _cask(self, packages, defaults) -> bool:
+        if defaults["auto_bootstrap"]:
+            self._bootstrap_brew()
+
+        result: bool = True
+
+        for pkg in packages:
+            run = self._install(
+                "brew install --cask {pkg}",
+                "test -d /usr/local/Caskroom/{pkg_name} "
+                + "|| brew ls --cask --versions {pkg_name}",
+                pkg,
+                defaults,
+            )
+            if not run:
+                self._log.error("Some packages were not installed")
+                result = False
+
+        if result:
+            self._log.info("All cask packages have been installed")
 
         return result
 
@@ -155,7 +164,9 @@ class Brew(dotbot.Plugin):
                 return True
 
             self._log.info(f"Installing {pkg}")
-            result = self._invoke_shell_command(install_format.format(pkg=pkg), defaults)
+            result = self._invoke_shell_command(
+                install_format.format(pkg=pkg), defaults
+            )
             if 0 != result:
                 self._log.warning("Failed to install [{pkg}]")
 
