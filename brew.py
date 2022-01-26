@@ -13,7 +13,7 @@ class Brew(dotbot.Plugin):
     _directives: Mapping[str, Callable]
     _defaults: Mapping[str, Any]
 
-    def __init__(self, context) -> None:
+    def __init__(self, *args, **kwargs) -> None:
         self._directives = {
             "install-brew": self._install_brew,
             "brew": self._brew,
@@ -44,7 +44,7 @@ class Brew(dotbot.Plugin):
                 "force_intel": False,
             },
         }
-        super().__init__(context)
+        super().__init__(*args, **kwargs)
 
     def can_handle(self, directive: str) -> bool:
         return directive in list(self._directives.keys())
@@ -57,18 +57,17 @@ class Brew(dotbot.Plugin):
 
     def _invoke_shell_command(self, cmd: str, defaults: Mapping[str, Any]) -> int:
         with open(os.devnull, "w") as devnull:
-            kwargs: Mapping[str, Any] = {
-                "Shell": True,
-                "cwd": self._context.base_directory(),
-                "stdin": devnull if defaults["stdin"] else None,
-                "stdout": devnull if defaults["stdout"] else None,
-                "stderr": devnull if defaults["stderr"] else None,
-            }
-
             if defaults["force_intel"]:
                 cmd = "arch --x86_64 " + cmd
 
-            return subprocess.call(cmd, **kwargs)
+            return subprocess.call(
+                cmd,
+                shell=True,
+                cwd=self._context.base_directory(),
+                stdin=devnull if defaults["stdin"] else None,
+                stdout=devnull if defaults["stdout"] else None,
+                stderr=devnull if defaults["stderr"] else None,
+            )
 
     def _tap(self, tap_list, defaults) -> bool:
         result: bool = True
