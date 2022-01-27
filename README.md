@@ -7,15 +7,28 @@
   <img src="https://github.com/wren/dotbot-brew/actions/workflows/ubuntu.yml/badge.svg" alt="Ubuntu">
 </a>
 
-Plugin for [dotbot](https://github.com/anishathalye/dotbot) that adds `brew` and `cask`
-directives. It allows installation of packages using `brew` and `brew cask` on OS X. In
-case `brew` is not installed, it will be automatically loaded and configured. The plugin
-itself is pretty silly as it doesn\'t handle updates and fails on unsupported operating
-systems.
+This is a plugin for [dotbot](https://github.com/anishathalye/dotbot) that adds `brew`,
+`cask`, `tap`, `brewfile`, and `install-brew` directives. It allows installation of
+packages using either `brew` or `brew cask`.
+
+
+## Features
+
+This plugin features an exceptionally fast check for installed packages (much faster
+than `brew` itself), and can handle hundreds of packages in a second or two. This is
+much faster than `brew` itself which takes [1-2 seconds *per
+package*](https://github.com/Homebrew/brew/issues/7701) (through `brew list
+package_name`). Please note that installing packages still takes the normal amount of
+time.
+
+This plugin can also install `brew` from scratch. It can be configured to automatically
+install `brew` if missing (through the `auto_bootstrap` setting), or to install `brew`
+explicitly (though the `install-brew` directive).
 
 ## Installation
 
-Just add it as submodule of your dotfiles repository.
+Add it as submodule of your dotfiles repository (per the [dotbot plugin installation
+guidelines](https://github.com/anishathalye/dotbot#plugins)).
 
 ```shell
 git submodule add https://github.com/wren/dotbot-brew.git
@@ -30,39 +43,21 @@ Modify your `install` script, so it automatically enables `brew` plugin.
 ## Usage
 
 In your `install.conf.yaml` use `brew` directive to list all packages to be installed
-using `brew`. The same works with `cask` and `brewfile`. For example:
+using `brew`. The same works with `cask` and `brewfile`.
 
-```yaml
-- brewfile:
-    - Brewfile
-    - brew/Brewfile
+Also, if you plan on having multiple directives, you should consider using defaults to
+set your preferred settings.
 
-- tap:
-    - caskroom/fonts
-
-- brew:
-    - git
-    - git-lfs
-    - emacs --with-cocoa --with-gnutls --with-librsvg --with-imagemagick --HEAD --use-git-head
-
-- brew: [gnupg, gnupg2]
-
-- cask: [colorpicker, vlc]
-```
-
-If you plan on having multiple instances of the directives in this
-package, you should consider using defaults to disable auto~bootstrap~
-(installation of brew and cask on every command), and installing first
-with the installBrew: directive
+For example, your config might look something like:
 
 ```yaml
 - defaults:
     - brewfile:
-        - auto_bootstrap: false
+        - stdout: true,
     - brew:
-        - auto_bootstrap: false
-    - cask:
-        - auto_bootstrap: false
+        - auto_bootstrap: true
+        - stderr: False,
+        - stdout: False,
 
 - install-brew: true
 
@@ -74,16 +69,24 @@ with the installBrew: directive
     - caskroom/fonts
 
 - brew:
+    - age
     - git
     - git-lfs
     - jrnl
     - neovim --HEAD
     - yq
+    - zsh
 
-- brew: [age, zsh]
-
-- cask: [signal, vlc, font-fira-code-nerd-font]
+- cask:
+    - signal
+    - vlc
+    - font-fira-code-nerd-font
 ```
 
-Defaults also can control stdin, stdout and stderr (disabling with
-false, enabling with true)
+## Special Thanks
+
+This project owes special thanks to
+[d12frosted](https://github.com/d12frosted/dotbot-brew) and
+[miguelandres](https://github.com/miguelandres/dotbot-brew) for their work in their own
+versions of `dotbot-brew` (which this project was originally forked from).
+
