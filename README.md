@@ -14,15 +14,14 @@ packages using either `brew` or `brew cask`.
 
 ## Features
 
-This plugin features an exceptionally fast check for installed packages (much faster
-than `brew` itself), and can handle hundreds of packages in a second or two. This is
-much faster than `brew` itself which takes [1-2 seconds *per
-package*](https://github.com/Homebrew/brew/issues/7701) (through `brew list
-package_name`). Please note that installing packages still takes the normal amount of
-time.
+This plugin features an exceptionally fast check for installed packages, and can handle
+hundreds of packages in a second or two. This is much faster than `brew` itself which
+takes [1-2 seconds *per package*](https://github.com/Homebrew/brew/issues/7701)
+(through `brew list package_name`). Please note that installing packages still takes the
+normal amount of time.
 
-This plugin can also install `brew` from scratch. It can be configured to install `brew`
-if missing (through the `install-brew` directive).
+This plugin can also install `brew` from scratch (through the `install-brew` directive).
+This directive will succeed if `brew` is already installed.
 
 ## Installation
 
