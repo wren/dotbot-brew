@@ -23,21 +23,18 @@ class Brew(dotbot.Plugin):
         }
         self._defaults = {
             "brew": {
-                "auto_bootstrap": False,
                 "stdin": False,
                 "stderr": False,
                 "stdout": False,
                 "force_intel": False,
             },
             "cask": {
-                "auto_bootstrap": False,
                 "stdin": False,
                 "stderr": False,
                 "stdout": False,
                 "force_intel": False,
             },
             "brewfile": {
-                "auto_bootstrap": False,
                 "stdin": True,
                 "stderr": True,
                 "stdout": True,
@@ -72,9 +69,6 @@ class Brew(dotbot.Plugin):
     def _tap(self, tap_list, defaults) -> bool:
         result: bool = True
 
-        if defaults["auto_bootstrap"]:
-            self._bootstrap_brew()
-
         for tap in tap_list:
             self._log.info(f"Tapping {tap}")
             cmd: str = f"brew tap {tap}"
@@ -86,9 +80,6 @@ class Brew(dotbot.Plugin):
         return result
 
     def _brew(self, packages: list, defaults: Mapping[str, Any]) -> bool:
-        if defaults["auto_bootstrap"]:
-            self._bootstrap_brew()
-
         result: bool = True
 
         for pkg in packages:
@@ -109,9 +100,6 @@ class Brew(dotbot.Plugin):
         return result
 
     def _cask(self, packages, defaults) -> bool:
-        if defaults["auto_bootstrap"]:
-            self._bootstrap_brew()
-
         result: bool = True
 
         for pkg in packages:
@@ -174,9 +162,6 @@ class Brew(dotbot.Plugin):
     def _brewfile(self, brew_files: list, defaults: Mapping[str, Any]) -> bool:
         result: bool = True
 
-        if defaults["auto_bootstrap"]:
-            self._bootstrap_brew()
-
         for file in brew_files:
             self._log.info(f"Installing from file {file}")
             cmd = f"brew bundle --verbose --file={file}"
@@ -187,15 +172,11 @@ class Brew(dotbot.Plugin):
 
         return result
 
-    def _install_brew(self, val: bool) -> bool:
+    def _install_brew(self, val: bool, defaults: Mapping[str, Any]) -> bool:
         if not val:
             self._log.error("Why would you even put `install-brew: false` in there?")
             return False
 
-        return 0 == self._bootstrap_brew()
-
-    def _bootstrap_brew(self):
-        self._log.info("Installing brew")
         link = "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
         cmd = f'command -v brew >/dev/null || /bin/bash -c "$(curl -fsSL {link})"'
-        return subprocess.call(cmd, shell=True, cwd=self._context.base_directory()) == 0
+        return self._install(cmd, 'command -v brew', 'brew', defaults)

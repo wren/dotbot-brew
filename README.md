@@ -21,9 +21,8 @@ package*](https://github.com/Homebrew/brew/issues/7701) (through `brew list
 package_name`). Please note that installing packages still takes the normal amount of
 time.
 
-This plugin can also install `brew` from scratch. It can be configured to automatically
-install `brew` if missing (through the `auto_bootstrap` setting), or to install `brew`
-explicitly (though the `install-brew` directive).
+This plugin can also install `brew` from scratch. It can be configured to install `brew`
+if missing (through the `install-brew` directive).
 
 ## Installation
 
@@ -51,23 +50,27 @@ set your preferred settings.
 For example, your config might look something like:
 
 ```yaml
+# Sets default config for certain directives
 - defaults:
     - brewfile:
         - stdout: true,
     - brew:
-        - auto_bootstrap: true
         - stderr: False,
         - stdout: False,
 
+# Installs brew if missing
 - install-brew: true
 
+# Reads brewfile for packages to install
 - brewfile:
     - Brewfile
     - brew/Brewfile
 
+# Adds a tap
 - tap:
     - caskroom/fonts
 
+# Installs certain brew packages
 - brew:
     - age
     - git
@@ -77,6 +80,7 @@ For example, your config might look something like:
     - yq
     - zsh
 
+# Installs certain casks
 - cask:
     - signal
     - vlc
