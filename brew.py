@@ -10,8 +10,8 @@ import dotbot
 
 
 class Brew(dotbot.Plugin):
-    _directives: Mapping[str, Callable]
-    _defaults: Mapping[str, Any]
+    _directives: Mapping[str, Callable] = {}
+    _defaults: Mapping[str, Any] = {}
 
     def __init__(self, *args, **kwargs) -> None:
         self._directives = {
@@ -52,7 +52,7 @@ class Brew(dotbot.Plugin):
     def handle(self, directive: str, data: Iterable) -> bool:
         user_defaults = self._context.defaults().get(directive, {})
         local_defaults = self._defaults.get(directive, {})
-        defaults = local_defaults | user_defaults
+        defaults = {**local_defaults, **user_defaults}
         return self._directives[directive](data, defaults)
 
     def _invoke_shell_command(self, cmd: str, defaults: Mapping[str, Any]) -> int:
