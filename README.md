@@ -9,7 +9,7 @@
 
 This is a plugin for [dotbot](https://github.com/anishathalye/dotbot) that adds `brew`,
 `cask`, `tap`, `brewfile`, and `install-brew` directives. It allows installation of
-packages using either `brew` or `brew cask`.
+packages using either `brew` or `brew --cask`.
 
 
 ## Features
