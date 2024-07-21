@@ -61,9 +61,9 @@ class Brew(dotbot.Plugin):
                 cmd,
                 shell=True,
                 cwd=self._context.base_directory(),
-                stdin=devnull if defaults["stdin"] else None,
-                stdout=devnull if defaults["stdout"] else None,
-                stderr=devnull if defaults["stderr"] else None,
+                stdin=True if defaults["stdin"] else devnull,
+                stdout=True if defaults["stdout"] else devnull,
+                stderr=True if defaults["stderr"] else devnull,
             )
 
     def _tap(self, tap_list, defaults) -> bool:
