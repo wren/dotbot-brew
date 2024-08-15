@@ -40,6 +40,12 @@ class Brew(dotbot.Plugin):
                 "stdout": True,
                 "force_intel": False,
             },
+            "binstall-brew": {
+                "stdin": True,
+                "stderr": True,
+                "stdout": True,
+                "force_intel": False,
+            },
         }
         super().__init__(*args, **kwargs)
 
@@ -178,5 +184,5 @@ class Brew(dotbot.Plugin):
             return False
 
         link = "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
-        cmd = f'command -v brew >/dev/null || /bin/bash -c "$(curl -fsSL {link})"'
+        cmd = f'/bin/bash -c "$(curl -fsSL {link})"'
         return self._install(cmd, 'command -v brew', 'brew', defaults)
