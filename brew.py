@@ -40,7 +40,7 @@ class Brew(dotbot.Plugin):
                 "stdout": True,
                 "force_intel": False,
             },
-            "binstall-brew": {
+            "install-brew": {
                 "stdin": True,
                 "stderr": True,
                 "stdout": True,
