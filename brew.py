@@ -40,6 +40,12 @@ class Brew(dotbot.Plugin):
                 "stdout": True,
                 "force_intel": False,
             },
+            "install-brew": {
+                "stdin": True,
+                "stderr": True,
+                "stdout": True,
+                "force_intel": False,
+            },
         }
         super().__init__(*args, **kwargs)
 
@@ -61,9 +67,9 @@ class Brew(dotbot.Plugin):
                 cmd,
                 shell=True,
                 cwd=self._context.base_directory(),
-                stdin=devnull if defaults["stdin"] else None,
-                stdout=devnull if defaults["stdout"] else None,
-                stderr=devnull if defaults["stderr"] else None,
+                stdin=True if defaults["stdin"] else devnull,
+                stdout=True if defaults["stdout"] else devnull,
+                stderr=True if defaults["stderr"] else devnull,
             )
 
     def _tap(self, tap_list, defaults) -> bool:
@@ -178,5 +184,5 @@ class Brew(dotbot.Plugin):
             return False
 
         link = "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
-        cmd = f'command -v brew >/dev/null || /bin/bash -c "$(curl -fsSL {link})"'
+        cmd = f'/bin/bash -c "$(curl -fsSL {link})"'
         return self._install(cmd, 'command -v brew', 'brew', defaults)
